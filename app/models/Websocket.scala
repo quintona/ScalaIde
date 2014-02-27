@@ -1,11 +1,14 @@
 package models
 
 import akka.actor._
-import akka.util.duration._
+import scala.concurrent.duration._
+import scala.concurrent.{Future, Promise}
 
-import play.api._
+import play.api.libs.concurrent.Execution.Implicits._
+
 import play.api.libs.json._
 import play.api.libs.iteratee._
+import play.api.libs.iteratee.Concurrent._
 import play.api.libs.concurrent._
 import play.api.Play.current
 
@@ -27,8 +30,8 @@ object Websocket {
   }
   
   /** Create a websocket for every joining visitor/user, send initial message. */
-  def join(id:String, projectPath: String):Promise[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
-    (default ? Join(id,projectPath)).asPromise.map {
+  def join(id:String, projectPath: String):Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
+    (default ? Join(id,projectPath)).map {
       
       case Connected(enumerator) => {
 
@@ -60,7 +63,7 @@ object Websocket {
   * from the websocket. */
 class Websocket extends Actor {
 
-  var members = Map.empty[String, PushEnumerator[JsValue]]
+  var members = Map.empty[String, Concurrent.Channel[JsValue]]
   var terminals = Map.empty[String, models.Terminal]
 
   /** Actor receive actor-message.
@@ -71,20 +74,24 @@ class Websocket extends Actor {
 
     case Join(id, path) => {
        
-      // Create an Enumerator to write to this socket
-      val channel =  Enumerator.imperative[JsValue]()
-      val terminal = new models.Terminal
-      terminal.setWebsocket(channel)
-      terminal.deactivateIfPublic(id)
-      if (!terminal.publicUser)
-        terminal.getSshLoginData(id)
-      terminal.start
+
+
       
       if(members.contains(id)) {
         sender ! CannotConnect("This username is already used")
       } else {
-        members = members + (id -> channel)
-        terminals = terminals + (id -> terminal)
+        // Create an Enumerator to write to this socket
+        val channel =  Concurrent.unicast[JsValue]{c =>
+          val terminal = new models.Terminal
+          terminal.setWebsocket(c)
+          terminal.deactivateIfPublic(id)
+          if (!terminal.publicUser)
+            terminal.getSshLoginData(id)
+          terminal.start
+          members = members + (id -> c)
+          terminals = terminals + (id -> terminal)
+        }
+
         sender ! Connected(channel)
 
         println(id + " connected!")
@@ -94,14 +101,17 @@ class Websocket extends Actor {
           "command" -> JsString("load"),
           "text" -> JsString("Happy Coding!"))
         ).as[JsValue]
-        
+
         Websocket.send(id, msg)
         Project.join(id, path)
       }
     }
 
     case Send(id, text) => {
-      members.getOrElse(id, null).push(text)
+      members.get(id) match {
+        case Some(c:Concurrent.Channel[JsValue]) => c.push(text)
+        case None => println("Error Case")
+      }
     }
     
     case Talk(id, text) => {
@@ -109,7 +119,7 @@ class Websocket extends Actor {
     }
 
     case Quit(id) => {
-      members.getOrElse(id, null).close()
+      members.getOrElse(id, null).end()
       members = members - id
 
       terminals.getOrElse(id, null).close

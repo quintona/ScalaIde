@@ -142,3 +142,11 @@ play h2-browser run
 ## Limits
 
   * One project per user
+
+# TODO
+
+Based on naming convention, inject boilerplate before compile, and ensure the line number errors resolve correctly
+Add the code suggestion from the other open source project
+Test out the command line integration
+Test out the scalding repl/job launching functionality
+

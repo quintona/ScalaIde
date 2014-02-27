@@ -27,6 +27,7 @@ class ScalaPresentationCompiler(val srcs: Seq[SourceFile], val jars: Seq[JFile])
     // TODO: Make classpath modifiable. If I modify it do I need to tell the
     // existing compiler or create a new one?
     val settings = new Settings()
+    //TODO: Add the local compiler jars, these should not have to be in the project...
     settings.classpath.value = jars.map(_.getAbsolutePath).mkString("", sep, "")
     
     val global = new Global(settings, reporter)
@@ -142,8 +143,6 @@ class ScalaPresentationCompiler(val srcs: Seq[SourceFile], val jars: Seq[JFile])
   }
   
   class PresentationReporter extends Reporter {
-  	  	
-  //	println("reporter");
   	
     import PresentationReporter._
     import scala.collection.mutable.ListBuffer

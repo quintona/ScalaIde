@@ -49,7 +49,7 @@ interact""".format(user, url, user, url, passw)
 class Terminal {
 
   var input: java.io.OutputStream = _
-  var websocket: PushEnumerator[JsValue] = _
+  var websocket: Concurrent.Channel[JsValue] = _
   var sshUser = ""
   var sshIp = ""
   var sshPwd = ""
@@ -111,7 +111,7 @@ class Terminal {
     lines.foreach(inner)
   }
 
-  def setWebsocket(ws: PushEnumerator[JsValue]) {
+  def setWebsocket(ws: Concurrent.Channel[JsValue]) {
     this.websocket = ws
   }
 

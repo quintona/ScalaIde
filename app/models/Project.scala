@@ -6,11 +6,13 @@ import PresentationCompiler.SourceFile
 import java.io.{File => JFile}
 import play.api.Play
 
+import play.api.libs.concurrent.Execution.Implicits._
+
 import play.api.libs.json._
 import play.api.libs.concurrent._
 import play.api.Play.current
 import akka.actor._
-import akka.util.duration._
+import scala.concurrent.duration._
 import akka.util.Timeout
 import akka.pattern.ask
 
@@ -347,9 +349,9 @@ class SbtProject(val path: String) {
   def buildSbtContent: String = {
     "name := \"ScalaIde Default Project\"\n\n" +
     "version := \"0.1\"\n\n" +
-    "scalaVersion := \"2.9.1\"\n\n" +
+    "scalaVersion := \"2.10.0\"\n\n" +
     "libraryDependencies += \"org.specs2\" %%" +
-      "\"specs2\" % \"1.11\" % \"test\"\n\n" +
+      "\"specs2\" % \"2.3.8\" % \"test\"\n\n" +
     "retrieveManaged := true"
   }
 
